@@ -1,5 +1,7 @@
-logdir=$HOME/worklog/$(date +%Y/%m)
-logfile=$HOME/worklog/$(date +%Y/%m/%d)
+logpath=$HOME/worklog
+
+logdir=$logpath/$(date +%Y/%m)
+logfile=$logpath/$(date +%Y/%m/%d)
 if [ ! -d $logdir ]; then
     mkdir -p $logdir
 fi
