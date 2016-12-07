@@ -1,17 +1,21 @@
+logpath=$HOME/worklog
+
 datestamp=$(date +%Z' '%Y-%m-%d' '%H:%M)
 timestamp=$(date +%H:%M)
-logdir=$HOME/worklog/$(date +%Y/%m)
-logfile=$HOME/worklog/$(date +%Y/%m/%d)
+logdir=$logpath/$(date +%Y/%m)
+logfile=$logpath/$(date +%Y/%m/%d)
+activities=$logpath/activities
 tmp=temp$(date +%s)
 
-
 activity(){
+  #read in activity options
   local aoptions=()
   while IFS= read -r line; do
     aoptions+=("$line")
-  done < $HOME/worklog/activities
+  done < $activities
   aoptions+=("Quit")
   
+  #select one activity
   PS3='activity Please enter your choice: '
   select aopt in "${aoptions[@]}"
   do
@@ -22,25 +26,28 @@ activity(){
     break
   done
   
+  #finish the last activities
   if ! grep "**" $logfile|tail -n 1 |grep -q "END" ; then
     line_number=$(grep -n "**" $logfile|tail -n 1|sed 's/:/ /g'|awk '{print $1}')
     sed  "${line_number}s/$/ END $datestamp/" $logfile>$tmp
     mv $tmp $logfile
   fi
   
+  #start the current activities
   if [ $aline != "Quit" ]; then
     echo "** $aline START $datestamp" >>$logfile
   fi
 }
 
 record(){
-  #start to input the message
   echo "----record----"
   echo "Write the message about the work"
   echo "and type 'save' to save and exit"
   echo "or 'quit' to quit without saving"
   printf "* $datestamp.; ">>$tmp
   echo "----start----"
+
+  #start to input the message
   while IFS= read -r line; do
    if [ "$line" = 'quit' ]; then
      echo "----quit----"
@@ -58,6 +65,7 @@ record(){
 }
 
 main(){
+  #check whether it is a new year, new month or a new day
   if [ ! -d $logdir ]; then
       mkdir -p $logdir
   fi
@@ -80,6 +88,5 @@ main(){
     fi
   done
 }
-
 
 main
