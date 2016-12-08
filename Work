@@ -1,11 +1,27 @@
+#note, quotation mark is super important...
+
 logpath=$HOME/worklog
 
 datestamp=$(date +%Z' '%Y-%m-%d' '%H:%M)
 timestamp=$(date +%H:%M)
-logdir=$logpath/$(date +%Y/%m)
-logfile=$logpath/$(date +%Y/%m/%d)
+logdir=$logpath/$(date +%Y)
+logfile=$logpath/$(date +%Y/%m)
 activities=$logpath/activities
 tmp=temp$(date +%s)
+
+startaday(){
+  sdatestamp=$(date +%Y-%m-%d)
+  timestamp=$(date +%H:%M' '%Z)
+  if [ ! -f $logfile ]; then
+    echo "---- $sdatestamp.; The day starts at $timestamp">>$logfile
+  else
+    if ! grep -q "$sdatestamp" $logfile ; then
+       echo "---- $sdatestamp.; The day starts at $timestamp">>$logfile
+    else
+       echo "yeah, in the day, huh"
+    fi
+  fi
+}
 
 activity(){
   #read in activity options
@@ -20,21 +36,22 @@ activity(){
   select aopt in "${aoptions[@]}"
   do
     aline="$aopt"
-    if [ $aopt = "Quit" ]; then
+    echo $aline
+    if [ "$aopt" = "Quit" ]; then
       break
     fi
     break
   done
   
   #finish the last activities
-  if ! grep "**" $logfile|tail -n 1 |grep -q "END" ; then
+  if grep "**" $logfile|tail -n 1 |grep -q "END" ; then
     line_number=$(grep -n "**" $logfile|tail -n 1|sed 's/:/ /g'|awk '{print $1}')
     sed  "${line_number}s/$/ END $datestamp/" $logfile>$tmp
     mv $tmp $logfile
   fi
   
   #start the current activities
-  if [ $aline != "Quit" ]; then
+  if [ "$aline" != "Quit" ]; then
     echo "** $aline START $datestamp" >>$logfile
   fi
 }
@@ -60,27 +77,22 @@ record(){
      rm $tmp
      break 
    fi
-   printf '%s\n' "$line">>$tmp
+   printf ' %s\n' "$line">>$tmp
   done
 }
 
 main(){
   #check whether it is a new year, new month or a new day
-  if [ ! -d $logdir ]; then
-      mkdir -p $logdir
-  fi
-  if [ ! -f $logfile ]; then
-    echo "$datestamp.; The day starts at $timestamp">>$logfile
-  fi
+  startaday
 
   moptions=("record" "activity" "Quit")
   PS3='main function please enter your choice: '
   select mopt in "${moptions[@]}"
   do
-    if [ $mopt = "record" ]; then
+    if [ "$mopt" = "record" ]; then
       record
       break
-    elif [ $mopt = "activity" ]; then
+    elif [ "$mopt" = "activity" ]; then
       activity
       break
     else
