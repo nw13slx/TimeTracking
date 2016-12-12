@@ -1,3 +1,4 @@
+#!/bin/bash
 #note, quotation mark is super important...
 
 logpath=$HOME/worklog
@@ -12,13 +13,20 @@ tmp=temp$(date +%s)
 startaday(){
   sdatestamp=$(date +%Y-%m-%d)
   timestamp=$(date +%H:%M' '%Z)
+
+  last_wake="$(journalctl -b 0|grep "Finishing wakeup"|tail -n 1|awk '{print $1,$2,$3}')"
+  last_date=$(echo "$last_wake"|awk '{print $1"-"$2}')
+  if [ "$last_date" = "$(date +%b-%d)" ]; then
+     timestamp="$(echo $last_wake|awk '{print $3}') $(date +%Z)"
+  fi
+
   if [ ! -f $logfile ]; then
-    echo "---- $sdatestamp.; The day starts at $timestamp">>$logfile
+    printf "\\n# $sdatestamp.; The day starts at $timestamp \\n">>$logfile
   else
     if ! grep -q "$sdatestamp" $logfile ; then
-       echo "---- $sdatestamp.; The day starts at $timestamp">>$logfile
+       printf "\\n# $sdatestamp.; The day starts at $timestamp \\n">>$logfile
     else
-       echo "yeah, in the day, huh"
+       printf "\\n yeah, in the day, huh \\n"
     fi
   fi
 }
@@ -44,15 +52,15 @@ activity(){
   done
   
   #finish the last activities
-  if grep "**" $logfile|tail -n 1 |grep -q "END" ; then
-    line_number=$(grep -n "**" $logfile|tail -n 1|sed 's/:/ /g'|awk '{print $1}')
+  if grep "##" $logfile|tail -n 1 |grep -q "END" ; then
+    line_number=$(grep -n "START" $logfile|grep "^**"|tail -n 1|sed 's/:/ /g'|awk '{print $1}')
     sed  "${line_number}s/$/ END $datestamp/" $logfile>$tmp
     mv $tmp $logfile
   fi
   
   #start the current activities
   if [ "$aline" != "Quit" ]; then
-    echo "** $aline START $datestamp" >>$logfile
+    printf "\\n**${aline}** START $datestamp\\n" >>$logfile
   fi
 }
 
@@ -61,7 +69,7 @@ record(){
   echo "Write the message about the work"
   echo "and type 'save' to save and exit"
   echo "or 'quit' to quit without saving"
-  printf "* $datestamp.; ">>$tmp
+  printf "**$datestamp** ">>$tmp
   echo "----start----"
 
   #start to input the message
@@ -77,15 +85,19 @@ record(){
      rm $tmp
      break 
    fi
-   printf ' %s\n' "$line">>$tmp
+   printf '%s\n\n' "$line">>$tmp
   done
+}
+
+gohome(){
+    printf "\\n### $sdatestamp.; The day ends at $timestamp \\n">>$logfile
 }
 
 main(){
   #check whether it is a new year, new month or a new day
   startaday
 
-  moptions=("record" "activity" "Quit")
+  moptions=("record" "activity" "go home" "Quit")
   PS3='main function please enter your choice: '
   select mopt in "${moptions[@]}"
   do
@@ -94,6 +106,9 @@ main(){
       break
     elif [ "$mopt" = "activity" ]; then
       activity
+      break
+    elif [ "$mopt" = "go home" ]; then
+      gohome
       break
     else
       break;

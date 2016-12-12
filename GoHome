@@ -1,9 +1,0 @@
-logdir=$HOME/worklog/$(date +%Y/%m)
-logfile=$HOME/worklog/$(date +%Y/%m/%d)
-if [ ! -d $logdir ]; then
-    mkdir -p $logdir
-fi
-
-datestamp=$(date +%Z' '%Y-%m-%d' '%H:%M)
-timestamp=$(date +%H:%M)
-echo "* $datestamp.; Go Home">>$logfile
