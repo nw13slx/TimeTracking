@@ -60,7 +60,7 @@ activity(){
   
   #start the current activities
   if [ "$aline" != "Quit" ]; then
-    printf "\\n**${aline}** START $datestamp\\n" >>$logfile
+    printf "\\n**${aline}** START $datestamp\\n\\n" >>$logfile
   fi
 }
 
@@ -89,15 +89,20 @@ record(){
   done
 }
 
+compile(){
+    pandoc $logfile -s --latexmathml -o $logfile.html 
+}
+
 gohome(){
     printf "\\n### $sdatestamp.; The day ends at $timestamp \\n">>$logfile
+    compile
 }
 
 main(){
   #check whether it is a new year, new month or a new day
   startaday
 
-  moptions=("record" "activity" "go home" "Quit")
+  moptions=("record" "activity" "go home" "compile" "Quit")
   PS3='main function please enter your choice: '
   select mopt in "${moptions[@]}"
   do
@@ -109,6 +114,9 @@ main(){
       break
     elif [ "$mopt" = "go home" ]; then
       gohome
+      break
+    elif [ "$mopt" = "compile" ]; then
+      compile
       break
     else
       break;
