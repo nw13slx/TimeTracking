@@ -3,75 +3,16 @@
 
 logpath=$HOME/worklog
 
-datestamp=$(date +%Z' '%Y-%m-%d' '%H:%M)
+datestamp=$(date +%Y-%m-%d)
 timestamp=$(date +%H:%M)
+timezone=$(date +%Z)
 logdir=$logpath/$(date +%Y)
 logfile=$logpath/$(date +%Y/%m)
 activities=$logpath/activities
 tmp=temp$(date +%s)
 
-startaday(){
-  sdatestamp=$(date +%Y-%m-%d)
-  timestamp=$(date +%H:%M' '%Z)
-
-  last_wake="$(journalctl -b 0|grep "Finishing wakeup"|tail -n 1|awk '{print $1,$2,$3}')"
-  last_date=$(echo "$last_wake"|awk '{print $1"-"$2}')
-  if [ "$last_date" = "$(date +%b-%d)" ]; then
-     timestamp="$(echo $last_wake|awk '{print $3}') $(date +%Z)"
-  fi
-
-  if [ ! -f $logfile ]; then
-    printf "\\n# $sdatestamp.; The day starts at $timestamp \\n">>$logfile
-  else
-    if ! grep -q "$sdatestamp" $logfile ; then
-       printf "\\n# $sdatestamp.; The day starts at $timestamp \\n">>$logfile
-    else
-       printf "\\n yeah, in the day, huh \\n"
-    fi
-  fi
-}
-
-activity(){
-  #read in activity options
-  local aoptions=()
-  while IFS= read -r line; do
-    aoptions+=("$line")
-  done < $activities
-  aoptions+=("Quit")
-  
-  #select one activity
-  PS3='activity Please enter your choice: '
-  select aopt in "${aoptions[@]}"
-  do
-    aline="$aopt"
-    echo $aline
-    if [ "$aopt" = "Quit" ]; then
-      break
-    fi
-    break
-  done
-  
-  #finish the last activities
-  if grep "##" $logfile|tail -n 1 |grep -q "END" ; then
-    line_number=$(grep -n "START" $logfile|grep "^**"|tail -n 1|sed 's/:/ /g'|awk '{print $1}')
-    sed  "${line_number}s/$/ END $datestamp/" $logfile>$tmp
-    mv $tmp $logfile
-  fi
-  
-  #start the current activities
-  if [ "$aline" != "Quit" ]; then
-    printf "\\n**${aline}** START $datestamp\\n\\n" >>$logfile
-  fi
-}
-
-record(){
-  echo "----record----"
-  echo "Write the message about the work"
-  echo "and type 'save' to save and exit"
-  echo "or 'quit' to quit without saving"
-  printf "**$datestamp** ">>$tmp
+takerecord(){
   echo "----start----"
-
   #start to input the message
   while IFS= read -r line; do
    if [ "$line" = 'quit' ]; then
@@ -89,12 +30,102 @@ record(){
   done
 }
 
+stamp_the_date(){
+  last_wake="$(journalctl -b 0|grep "Finishing wakeup"|tail -n 1|awk '{print $1,$2,$3}')"
+  last_date=$(echo "$last_wake"|awk '{print $1"-"$2}')
+  if [ "$last_date" = "$(date +%b-%d)" ]; then
+     timestamp="$(echo $last_wake|awk '{print $3}')"
+     echo "time stamp from the wake log file"
+  else 
+     echo "time stamp not from the wake log file"
+  fi
+
+  printf "\\n# $datestamp\\nThe day starts at <i>$timestamp $timezone</i>\\n">>$logfile
+
+}
+
+startaday(){
+  if [ ! -d $logdir ]; then
+    mkdir -p $logdir 
+  fi
+
+  #remind myself my new year resolution
+  if [ -f $logdir/Resolution ]; then
+    echo "Your new year resolution:"
+    cat $logdir/Resolution
+    echo " "
+  else
+    echo "time to write a new year resolution!"
+  fi
+
+  if [ -f $logfile ]; then
+    if ! grep -q "$datestamp" $logfile ; then
+       stamp_the_date 
+    fi
+  else
+    stamp_the_date
+  fi
+
+  if ! grep Goal $logfile|grep "$datestamp" -q ; then
+    echo "write the goal of today. It has to be one line."
+    printf "**Goal** <i>$datestamp</i>: ">$tmp
+    takerecord
+  else
+    grep Goal $logfile|grep "$datestamp"
+  fi
+}
+
+activity(){
+  #read in activity options
+  local aoptions=()
+  while IFS= read -r line; do
+    aoptions+=("$line")
+  done < $activities
+  aoptions+=("Quit")
+  
+  #select one activity
+  PS3='activity Please enter your choice: '
+  select aopt in "${aoptions[@]}"
+  do
+    aline="$aopt"
+    #echo $aline
+    if [ "$aopt" = "Quit" ]; then
+      break
+    fi
+    break
+  done
+  
+  #finish the last activities
+  if grep -q "START $datestamp" $logfile; then
+    if ! grep -q "START $datestamp" $logfile|tail -n 1 |grep -q "END" ; then
+      echo "automatically finish last activity"
+      line_number=$(grep -n "START $datestamp" $logfile|tail -n 1|sed 's/:/ /g'|awk '{print $1}')
+      sed  "${line_number}s/$/ END $datestamp \<i\>$timestamp $timezone\<\/i\>/" $logfile>$tmp
+      mv $tmp $logfile
+    fi
+  fi
+  
+  #start the current activities
+  if [ "$aline" != "Quit" ]; then
+    printf "\\n**${aline}** START $datestamp <i>$timestamp $timezone</i>\\n\\n" >>$logfile
+  fi
+}
+
+record(){
+  echo "----record----"
+  echo "Write the message about the work"
+  echo "and type 'save' to save and exit"
+  echo "or 'quit' to quit without saving"
+  printf "**Record** <i>$timezone $datestamp $timestamp</i>: ">$tmp
+  takerecord
+}
+
 compile(){
     pandoc $logfile -s --latexmathml -o $logfile.html 
 }
 
 gohome(){
-    printf "\\n### $sdatestamp.; The day ends at $timestamp \\n">>$logfile
+    printf "\\n### $sdatestamp.; The day ends at <i>$timestamp $timezone</i>\\n\\n">>$logfile
     compile
 }
 
