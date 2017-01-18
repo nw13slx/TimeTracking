@@ -12,6 +12,9 @@ activities=$logpath/activities
 tmp=temp$(date +%s)
 
 takerecord(){
+  echo "Write the message and type 'save'"
+  echo "to save and exit or 'quit' to "
+  echo "quit without saving"
   echo "----start----"
   #start to input the message
   while IFS= read -r line; do
@@ -112,11 +115,8 @@ activity(){
 }
 
 record(){
-  echo "----record----"
-  echo "Write the message about the work"
-  echo "and type 'save' to save and exit"
-  echo "or 'quit' to quit without saving"
   printf "**Record** <i>$timezone $datestamp $timestamp</i>: ">$tmp
+  echo "write the work record. It can be multiple lines"
   takerecord
 }
 
