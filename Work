@@ -70,7 +70,8 @@ startaday(){
   fi
 
   if ! grep Goal $logfile|grep "$datestamp" -q ; then
-    echo "write the goal of today. It has to be one line."
+    echo "#write the goal of today. It has to be one line."
+    echo "#previous goal:" $(grep Goal $logfile|tail -n 1)
     printf "**Goal** <i>$datestamp</i>: ">$tmp
     takerecord
   else
