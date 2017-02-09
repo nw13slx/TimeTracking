@@ -25,11 +25,12 @@ takerecord(){
    fi
    if [ "$line" = 'save' ]; then
      echo "----save----"
+     printf '\n'>>$tmp
      cat $tmp >>$logfile
      rm $tmp
      break 
    fi
-   printf '%s\n\n' "$line">>$tmp
+   printf '| %s\n' "$line">>$tmp
   done
 }
 
@@ -43,7 +44,7 @@ stamp_the_date(){
      echo "time stamp not from the wake log file"
   fi
 
-  printf "\\n# $datestamp\\nThe day starts at <i>$timestamp $timezone</i>\\n">>$logfile
+  printf "\\n# $datestamp\\nThe day starts at <i>$timestamp $timezone</i>\\n\\n">>$logfile
 
 }
 
@@ -116,13 +117,13 @@ activity(){
 }
 
 record(){
-  printf "**Record** <i>$timezone $datestamp $timestamp</i>: ">$tmp
+  printf "**Record** <i>$timezone $datestamp $timestamp</i>:\n\n">$tmp
   echo "write the work record. It can be multiple lines"
   takerecord
 }
 
 compile(){
-    pandoc $logfile -s --latexmathml -o $logfile.html 
+    pandoc $logfile --wrap=auto -s --latexmathml -o $logfile.html 
 }
 
 gohome(){
