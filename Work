@@ -12,6 +12,9 @@ activities=$logpath/activities
 tmp=temp$(date +%s)
 
 takerecord(){
+  if [ $1 == "r" ]; then
+    echo "<details>" >>$tmp
+  fi
   echo "Write the message and type 'save'"
   echo "to save and exit or 'quit' to "
   echo "quit without saving"
@@ -26,16 +29,27 @@ takerecord(){
    if [ "$line" = 'save' ]; then
      echo "----save----"
      printf '\n'>>$tmp
+     if [ $1 == "r" ]; then
+       echo "</details>" >>$tmp
+     fi
      cat $tmp >>$logfile
      rm $tmp
      break 
    fi
    printf '| %s\n' "$line">>$tmp
   done
+  echo 
 }
 
 stamp_the_date(){
-  last_wake="$(journalctl -b 0|grep "Finishing wakeup"|tail -n 1|awk '{print $1,$2,$3}')"
+  system=`uname`
+  if [ $system = "Darwin" ]; then
+    last_wake="$(date +%b%_d) $(pmset -g log |grep -e " -0500 Wake   "|grep "$(date +%Y-%m-%d)"|head -n 1|awk '{print $2}')"
+  elif [ $system = "Linux" ]; then
+    last_wake="$(journalctl -b 0|grep "Finishing wakeup"|tail -n 1|awk '{print $1,$2,$3}')"
+  else
+    echo "cannot recognize the system"
+  fi
   last_date=$(echo "$last_wake"|awk '{print $1"-"$2}')
   if [ "$last_date" = "$(date +%b-%d)" ]; then
      timestamp="$(echo $last_wake|awk '{print $3}')"
@@ -50,6 +64,7 @@ stamp_the_date(){
 
 startaday(){
   if [ ! -d $logdir ]; then
+    echo "mkdir -p $logdir"
     mkdir -p $logdir 
   fi
 
@@ -74,7 +89,7 @@ startaday(){
     echo "#write the goal of today. It has to be one line."
     echo "#previous goal:" $(grep Goal $logfile|tail -n 1)
     printf "**Goal** <i>$datestamp</i>: ">$tmp
-    takerecord
+    takerecord g
   else
     grep Goal $logfile|grep "$datestamp"
   fi
@@ -119,11 +134,12 @@ activity(){
 record(){
   printf "**Record** <i>$timezone $datestamp $timestamp</i>:\n\n">$tmp
   echo "write the work record. It can be multiple lines"
-  takerecord
+  takerecord r
 }
 
 compile(){
-    pandoc $logfile --wrap=auto -s --latexmathml -o $logfile.html 
+  echo pandoc \$logfile --wrap=auto -s -c pandoc.css --mathml --latexmathml -o \$logfile.html 
+  pandoc --wrap=auto --mathjax --mathml -c $logpath/app/pandoc.css -s --toc $logfile -o $logfile.html
 }
 
 gohome(){
@@ -131,11 +147,18 @@ gohome(){
     compile
 }
 
+check_pending(){
+  echo "~~~~~~~~~~~~~~~~~~~"
+  echo "the pending jobs..."
+  grep "(@pending job)" $(find $logpath/20*/ -type f)|cat -n
+  echo "~~~~~~~~~~~~~~~~~~~"
+}
+
 main(){
   #check whether it is a new year, new month or a new day
   startaday
 
-  moptions=("record" "activity" "go home" "compile" "Quit")
+  moptions=("record" "activity" "go home" "compile" "check pending job" "Quit")
   PS3='main function please enter your choice: '
   select mopt in "${moptions[@]}"
   do
@@ -151,8 +174,11 @@ main(){
     elif [ "$mopt" = "compile" ]; then
       compile
       break
+    elif [ "$mopt" = "check pending job" ]; then
+      check_pending
+      break
     else
-      break;
+      break
     fi
   done
 }
